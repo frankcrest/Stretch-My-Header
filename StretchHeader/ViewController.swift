@@ -13,21 +13,24 @@ class ViewController: UIViewController {
   var content = [NewsItem]()
   let kTableHeaderHeight:CGFloat = 200
   var heightConstraint:NSLayoutConstraint!
+  var widthConstraint:NSLayoutConstraint!
+//  var topConstraint:NSLayoutConstraint!
+  private let kTableHeaderCutAway: CGFloat = 80
+  var headerMaskLayer: CAShapeLayer!
   
   let tableView : UITableView = {
     let tb = UITableView(frame:CGRect.zero)
     tb.translatesAutoresizingMaskIntoConstraints = false
     tb.register(CustomCell.self, forCellReuseIdentifier: "customCell")
+    tb.tableHeaderView = nil
     tb.rowHeight = UITableView.automaticDimension
     tb.estimatedRowHeight = UITableView.automaticDimension
     return tb
   }()
 
   let headerView:UIView = {
-    let uv = UIView(frame: CGRect.zero)
+    let uv = UIView()
     uv.clipsToBounds = true
-    uv.translatesAutoresizingMaskIntoConstraints = false
-//    uv.frame.size.height = 200
     return uv
   }()
   
@@ -57,6 +60,15 @@ class ViewController: UIViewController {
     
     setupViews()
     setupContent()
+    self.view.layoutIfNeeded()
+    
+    headerMaskLayer = CAShapeLayer()
+    headerMaskLayer.fillColor = UIColor.black.cgColor
+    headerView.layer.mask = headerMaskLayer
+    let effectiveHeight = kTableHeaderHeight - kTableHeaderCutAway/2
+    tableView.contentInset = UIEdgeInsets(top: effectiveHeight, left: 0, bottom: 0, right: 0)
+    tableView.contentOffset = CGPoint(x: 0, y: -effectiveHeight)
+    updateHeaderView()
   }
   
   override var prefersStatusBarHidden: Bool{
@@ -81,10 +93,12 @@ class ViewController: UIViewController {
     headerView.addSubview(labelInHeader)
     tableView.delegate = self
     tableView.dataSource = self
-    //tableView.tableHeaderView = headerView
     tableView.addSubview(headerView)
-    tableView.contentInset.top = kTableHeaderHeight
-    heightConstraint = headerView.heightAnchor.constraint(equalToConstant: kTableHeaderHeight)
+    
+//    heightConstraint = headerView.heightAnchor.constraint(equalToConstant: kTableHeaderHeight)
+//    widthConstraint = headerView.widthAnchor.constraint(equalToConstant: tableView.frame.size.width)
+   // topConstraint = headerView.topAnchor.constraint(equalTo: self.view.topAnchor, constant: 0)
+
     
     NSLayoutConstraint.activate([
       tableView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
@@ -102,19 +116,30 @@ class ViewController: UIViewController {
       labelInHeader.topAnchor.constraint(equalTo: self.headerView.topAnchor),
       labelInHeader.heightAnchor.constraint(equalToConstant: 20),
       
-      headerView.leadingAnchor.constraint(equalTo: tableView.leadingAnchor),
-      headerView.trailingAnchor.constraint(equalTo: tableView.trailingAnchor),
-      headerView.topAnchor.constraint(equalTo: self.view.topAnchor),
-      heightConstraint
-      
+//      headerView.leadingAnchor.constraint(equalTo: tableView.leadingAnchor),
+//      headerView.trailingAnchor.constraint(equalTo: tableView.trailingAnchor),
+//      topConstraint,
+//      heightConstraint,
+//      widthConstraint
       ])
   }
   
   func updateHeaderView(){
-    if abs(tableView.contentOffset.y) > kTableHeaderHeight{
-      let newHeight = abs(tableView.contentOffset.y)
-      heightConstraint.constant = newHeight
+    let effectiveHeight = kTableHeaderHeight - kTableHeaderCutAway/2
+    var headerRect = CGRect(x: 0, y: -effectiveHeight, width: tableView.bounds.width, height: kTableHeaderHeight)
+    if tableView.contentOffset.y < -effectiveHeight{
+      headerRect.origin.y = tableView.contentOffset.y
+      headerRect.size.height = -tableView.contentOffset.y + kTableHeaderCutAway/2
     }
+    headerView.frame = headerRect
+    
+    let path = UIBezierPath()
+    path.move(to: CGPoint(x: 0, y: 0))
+    path.addLine(to: CGPoint(x: headerRect.width, y: 0))
+    path.addLine(to: CGPoint(x: headerRect.width, y: headerRect.height))
+    path.addLine(to: CGPoint(x: 0, y: headerRect.height - kTableHeaderCutAway))
+    headerMaskLayer?.path = path.cgPath
+    
   }
 }
 
